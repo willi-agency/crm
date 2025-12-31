@@ -1,0 +1,924 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Enterprise {
+  id                          String                        @id @default(uuid())
+  name                        String                        @unique
+  cnpj                        String                        @unique
+  logo                        String?
+  type                        EnterpriseType                @default(STANDARD)
+  webhookDeploy               String?
+  createdAt                   DateTime                      @default(now())
+  updatedAt                   DateTime                      @updatedAt
+  deletedAt                   DateTime?
+  addressCity                 String?
+  addressComplement           String?
+  addressCountry              String?
+  addressNeighborhood         String?
+  addressNumber               String?
+  addressPostalCode           String?
+  addressState                String?
+  addressStreet               String?
+  corporateReason             String?
+  domain                      String?
+  responsible                 String?
+  MapCoverage                 Json?
+  briefing                    String?
+  ApiKey                      ApiKey[]
+  articles                    Article[]
+  authors                     Author[]
+  CampaingMarketing           Campaign[]
+  categories                  Category[]
+  ContactList                 ContactList[]
+  EcommerceCategory           EcommerceCategory[]
+  EcommerceProduct            EcommerceProduct[]
+  EnterpriseEcommerceLocation EnterpriseEcommerceLocation[]
+  KeywordPage                 KeywordPage[]
+  KeywordPageCategory         KeywordPageCategory[]
+  LeadCardConfig              LeadCardConfig[]
+  Pipeline                    LeadPipeline[]
+  LeadSubmit                  LeadSubmit[]
+  Role                        Role[]
+  tags                        Tag[]
+  users                       User[]
+  Contract Contract[]
+
+  UtmSubmission UtmSubmission[]
+
+  Taxonomy Taxonomy[]
+}
+
+model Contract {
+  id              String          @id @default(uuid())
+  name            String
+  code            String          @unique
+  type            ContractType    @default(NEW)
+  previousId      String?
+  previous        Contract?       @relation("ContractRenewal", fields: [previousId], references: [id])
+  renewals        Contract[]      @relation("ContractRenewal")
+  status          ContractStatus  @default(ACTIVE)
+  financialStatus FinancialStatus @default(OK)
+  version         Int             @default(1)
+  startDate       DateTime
+  endDate         DateTime?
+  renegotiatedAt  DateTime?
+  price           Decimal          @db.Decimal(10,2)
+  currency        String           @default("BRL")
+  billingCycle    BillingCycle     @default(MONTHLY)
+  notes           String?
+  documentUrl     String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  deletedAt       DateTime?
+  webhookDeploy   String?
+  enterpriseId    String
+  enterprise      Enterprise      @relation(fields: [enterpriseId], references: [id])
+  serviceId       String
+  service         Service         @relation(fields: [serviceId], references: [id])
+
+  SiteContractDetails SiteContractDetails[]
+  UserContractAccess UserContractAccess[]
+
+  ApiKey ApiKey[]
+
+  Author Author[]
+
+  Article Article[]
+
+  Category Category[]
+
+  Tag Tag[]
+
+  LeadSubmit LeadSubmit[]
+
+  LeadPipeline LeadPipeline[]
+
+  LeadCardConfig LeadCardConfig[]
+
+  KeywordPage KeywordPage[]
+
+  ContactList ContactList[]
+
+  KeywordPageCategory KeywordPageCategory[]
+
+  Campaign Campaign[]
+
+  UtmSubmission UtmSubmission[]
+
+  Taxonomy Taxonomy[]
+}
+
+model Service {
+  id          String       @id @default(uuid())
+  name        String
+  description String?
+  status      ServiceStatus @default(ACTIVE)
+  version     Int          @default(1)
+  config      Json?
+  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+
+  contracts   Contract[]
+}
+
+model SiteContractDetails {
+  id            String   @id @default(uuid())
+  contractId    String   @unique
+  url           String
+  hostingType   String?
+  pagesLimit    Int?
+  keywordsLimit Int? 
+  lang          String?
+  blogContent   Boolean  @default(true)
+  contract    Contract @relation(fields: [contractId], references: [id])
+}
+
+model ApiKey {
+  id           String       @id @default(uuid())
+  key          String       @unique
+  enterpriseId String
+  contractId   String? 
+  createdAt    DateTime     @default(now())
+  revoked      Boolean      @default(false)
+  description  String?
+  enterprise   Enterprise   @relation(fields: [enterpriseId], references: [id])
+  contract      Contract?     @relation(fields: [contractId], references: [id])
+  LeadSubmit   LeadSubmit[]
+}
+
+model User {
+  id               String             @id @default(uuid())
+  name             String
+  email            String             @unique
+  password         String
+  enterpriseId     String
+  roleId           String
+  createdAt        DateTime           @default(now())
+  deletedAt        DateTime?
+  Article          Article[]
+  LeadPipelineList LeadPipelineList[]
+  enterprise       Enterprise         @relation(fields: [enterpriseId], references: [id])
+  role             Role               @relation(fields: [roleId], references: [id])
+  UserLog          UserLog[]
+  LeadActivity LeadActivity[]
+  UserContractAccess UserContractAccess[]
+
+  LeadActivityParticipant LeadActivityParticipant[]
+
+  UtmSubmission UtmSubmission[]
+}
+
+model Role {
+  id           String           @id @default(uuid())
+  name         String
+  enterpriseId String
+  deletedAt    DateTime?
+  enterprise   Enterprise       @relation(fields: [enterpriseId], references: [id])
+  permissions  RolePermission[]
+  users        User[]
+}
+
+model Permission {
+  id     String           @id @default(uuid())
+  module String
+  action String
+  label  String
+  folder String
+  roles  RolePermission[]
+
+  @@unique([module, action])
+}
+
+model RolePermission {
+  id           String     @id @default(uuid())
+  roleId       String
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  role         Role       @relation(fields: [roleId], references: [id])
+
+  @@unique([roleId, permissionId])
+}
+
+model UserContractAccess {
+  id         String   @id @default(uuid())
+  userId     String
+  contractId String
+
+  user       User     @relation(fields: [userId], references: [id])
+  contract   Contract @relation(fields: [contractId], references: [id])
+
+  @@unique([userId, contractId])
+}
+
+model Author {
+  id           String     @id @default(uuid())
+  name         String
+  bio          String?
+  profileUrl   String?
+  sameAs       String[]
+  image        String?
+  enterpriseId String
+  contractId   String? 
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  deletedAt    DateTime?
+  articles     Article[]
+  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id])
+  contract      Contract?     @relation(fields: [contractId], references: [id])
+}
+
+model Taxonomy {
+  id              String       @id @default(uuid())
+  name            String
+  slug            String
+  type            TaxonomyType
+  description     String?
+  metaTitle       String?
+  metaDescription String?
+  thumb           String?
+  deletedAt       DateTime?
+  enterpriseId    String
+  contractId      String?
+
+  enterprise   Enterprise   @relation(fields: [enterpriseId], references: [id])
+  contract     Contract?    @relation(fields: [contractId], references: [id])
+
+  articles     ArticleTaxonomy[]
+
+  @@unique([slug, enterpriseId, type], name: "slug_enterpriseId_type")
+}
+
+model ArticleTaxonomy {
+  articleId  String
+  taxonomyId String
+
+  article Article   @relation(fields: [articleId], references: [id])
+  taxonomy Taxonomy @relation(fields: [taxonomyId], references: [id])
+
+  @@id([articleId, taxonomyId])
+}
+
+model Article {
+  id            String        @id @default(uuid())
+  title         String
+  slug          String
+  description   String
+  recommended   Boolean?       @default(false)
+  content       String
+  rawContent    Json?
+  image         String?
+  enterpriseId  String
+  contractId    String? 
+  authorId      String
+  categoryId    String?
+  createdById   String
+  status        ArticleStatus @default(DRAFT)
+  datePublished DateTime?
+  deletedAt     DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  author        Author        @relation(fields: [authorId], references: [id])
+  category      Category?     @relation(fields: [categoryId], references: [id])
+  createdBy     User          @relation(fields: [createdById], references: [id])
+  enterprise    Enterprise    @relation(fields: [enterpriseId], references: [id])
+  contract      Contract?     @relation(fields: [contractId], references: [id])
+  tags          Tag[]         @relation("ArticleTags")
+
+  ArticleTaxonomy ArticleTaxonomy[]
+
+  @@index([enterpriseId, createdAt])
+  @@unique([slug, enterpriseId], name: "slug_enterpriseId")
+}
+
+model Category {
+  id           String     @id @default(uuid())
+  name         String
+  slug         String
+  deletedAt    DateTime?
+  enterpriseId String
+  contractId   String?
+  articles     Article[]
+  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id])
+  contract      Contract?     @relation(fields: [contractId], references: [id])
+
+  @@unique([slug, enterpriseId], name: "slug_enterpriseId")
+}
+
+model Tag {
+  id           String     @id @default(uuid())
+  name         String
+  slug         String
+  deletedAt    DateTime?
+  enterpriseId String
+  contractId   String?
+  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id])
+  contract      Contract?     @relation(fields: [contractId], references: [id])
+  articles     Article[]  @relation("ArticleTags")
+
+  @@unique([slug, enterpriseId], name: "slug_enterpriseId")
+}
+
+model LabelForm {
+  id             String           @id @default(uuid())
+  name           String           @unique
+  label          String
+  type           String
+  description    String?
+  createdAt      DateTime         @default(now())
+  deletedAt      DateTime?
+  LeadCardConfig LeadCardConfig[]
+  LeadData       LeadData[]
+}
+
+model LeadData {
+  id         String     @id @default(uuid())
+  labelId    String
+  value      String
+  createdAt  DateTime   @default(now())
+  deletedAt  DateTime?
+  submitId   String
+  label      LabelForm  @relation(fields: [labelId], references: [id])
+  leadSubmit LeadSubmit @relation(fields: [submitId], references: [id])
+}
+
+model LeadSubmit {
+  id                     String             @id @default(uuid())
+  submittedAt            DateTime           @default(now())
+  userAgent              Json?
+  dataFormId             String
+  apiKeyId               String?
+  enterpriseId           String
+  contractId             String?
+  currentPipelineStageId String?
+  LeadContactList        LeadContactList[]
+  LeadData               LeadData[]
+  pipelines              LeadPipelineList[]
+  apiKey                 ApiKey?            @relation(fields: [apiKeyId], references: [id])
+  currentPipelineStage   LeadPipelineStage? @relation(fields: [currentPipelineStageId], references: [id])
+  enterprise             Enterprise         @relation(fields: [enterpriseId], references: [id])
+  contract               Contract?          @relation(fields: [contractId], references: [id])
+  MessageDelivery        MessageDelivery[]
+
+  LeadActivity LeadActivity[]
+}
+
+model LeadPipeline {
+  id           String              @id @default(uuid())
+  name         String
+  description  String?
+  enterpriseId String
+  contractId   String?
+  isActive     Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  enterprise   Enterprise          @relation(fields: [enterpriseId], references: [id])
+  contract      Contract?     @relation(fields: [contractId], references: [id])
+  stages       LeadPipelineStage[]
+}
+
+model LeadPipelineStage {
+  id         String             @id @default(uuid())
+  name       String
+  order      Int
+  pipelineId String
+  leads      LeadPipelineList[]
+  pipeline   LeadPipeline       @relation(fields: [pipelineId], references: [id])
+  LeadSubmit LeadSubmit[]
+}
+
+model LeadPipelineList {
+  id              String            @id @default(uuid())
+  leadId          String
+  userId          String?
+  pipelineStageId String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  lead            LeadSubmit        @relation(fields: [leadId], references: [id])
+  pipelineStage   LeadPipelineStage @relation(fields: [pipelineStageId], references: [id])
+  user            User?             @relation(fields: [userId], references: [id])
+}
+
+model LeadCardConfig {
+  id           String     @id @default(uuid())
+  enterpriseId String
+  contractId   String?
+  fieldId      String
+  visible      Boolean    @default(true)
+  order        Int
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id])
+  contract      Contract?     @relation(fields: [contractId], references: [id])
+  field        LabelForm  @relation(fields: [fieldId], references: [id])
+}
+
+model LeadActivity {
+  id               String     @id @default(uuid())
+  leadId           String
+  userId           String
+  type             LeadActivityType
+  title            String?
+  description      String?
+  dueDate          DateTime?  
+  doneAt           DateTime?  
+  sendNotification Boolean    @default(true)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  lead         LeadSubmit @relation(fields: [leadId], references: [id])
+  user         User       @relation(fields: [userId], references: [id])
+
+  LeadActivityParticipant LeadActivityParticipant[]
+  LeadMeetingDetails LeadMeetingDetails[]
+}
+
+model LeadActivityParticipant {
+  id             String   @id @default(uuid())
+  activityId     String
+  userId         String?
+  externalEmail  String?
+  role           MeetingParticipantRole  @default(PARTICIPANT)
+  activity       LeadActivity @relation(fields: [activityId], references: [id])
+  user           User?         @relation(fields: [userId], references: [id])
+
+  @@unique([activityId, userId])
+  @@unique([activityId, externalEmail])
+}
+
+model LeadMeetingDetails {
+  id                   String       @id @default(uuid())
+  activityId           String       @unique
+  startDate            DateTime?
+  endDate              DateTime?
+  meetingType          MeetingType  @default(ONLINE)
+  location             String?
+  addressPostalCode    String?
+  addressStreet        String?
+  addressNumber        String?
+  addressComplement    String?
+  addressCity          String?
+  addressNeighborhood  String?
+  addressCountry       String?
+  addressState         String?
+  link                 String?
+
+  activity             LeadActivity @relation(fields: [activityId], references: [id])
+}
+
+model KeywordPage {
+  id                    String               @id @default(uuid())
+  keyword               String
+  slug                  String?
+  title                 String?
+  description           String?
+  thumbnail             String?
+  content               String?
+  rawContent            Json?
+  enterpriseId          String
+  contractId            String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  deletedAt             DateTime?
+  keywordPageCategoryId String?
+  enterprise            Enterprise           @relation(fields: [enterpriseId], references: [id])
+  contract      Contract?     @relation(fields: [contractId], references: [id])
+  keywordPageCategory   KeywordPageCategory? @relation(fields: [keywordPageCategoryId], references: [id])
+
+  @@index([enterpriseId, createdAt])  
+  @@unique([slug, enterpriseId], name: "slug_enterpriseId")
+}
+
+model KeywordPageCategory {
+  id           String        @id @default(uuid())
+  name         String
+  slug         String
+  deletedAt    DateTime?
+  enterpriseId String
+  contractId   String?
+  KeywordPage  KeywordPage[]
+  enterprise   Enterprise    @relation(fields: [enterpriseId], references: [id])
+  contract      Contract?     @relation(fields: [contractId], references: [id])
+
+  @@unique([slug, enterpriseId], name: "slug_enterpriseId")
+}
+
+model UtmSubmission {
+  id           String      @id @default(uuid())
+  baseUrl      String
+
+  enterpriseId String
+  contractId   String?
+  createdById  String
+
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  fields       UtmEntry[]
+
+  enterprise   Enterprise  @relation(fields: [enterpriseId], references: [id])
+  contract     Contract?   @relation(fields: [contractId], references: [id])
+  createdBy    User        @relation(fields: [createdById], references: [id])
+}
+
+model UtmEntry {
+  id              String   @id @default(uuid())
+  utmSubmissionId String
+
+  utmField         String
+  utmValue         String
+
+  utmSubmission UtmSubmission @relation(fields: [utmSubmissionId], references: [id])
+}
+
+model ContactList {
+  id            String            @id @default(uuid())
+  slug          String
+  version       Int
+  name          String
+  description   String?
+  filters       Json
+  enterpriseId  String
+  contractId    String?
+  createdAt     DateTime          @default(now())
+  campaignSteps CampaignStep[]
+  enterprise    Enterprise        @relation(fields: [enterpriseId], references: [id])
+  contract      Contract?     @relation(fields: [contractId], references: [id])
+  leads         LeadContactList[]
+
+  @@unique([slug, version])
+}
+
+model LeadContactList {
+  id            String      @id @default(uuid())
+  contactListId String
+  leadSubmitId  String
+  createdAt     DateTime    @default(now())
+  contactList   ContactList @relation(fields: [contactListId], references: [id])
+  leadSubmit    LeadSubmit  @relation(fields: [leadSubmitId], references: [id])
+}
+
+model Campaign {
+  id           String             @id @default(uuid())
+  name         String
+  description  String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  deletedAt    DateTime?
+  enterpriseId String
+  contractId   String?
+  enterprise   Enterprise         @relation(fields: [enterpriseId], references: [id])
+  contract      Contract?     @relation(fields: [contractId], references: [id])
+  sequences    CampaignSequence[]
+}
+
+model CampaignSequence {
+  id          String         @id @default(uuid())
+  name        String
+  description String?
+  campaignId  String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  deletedAt   DateTime?
+  campaign    Campaign       @relation(fields: [campaignId], references: [id])
+  steps       CampaignStep[]
+}
+
+model CampaignStep {
+  id              String            @id @default(uuid())
+  sequenceId      String
+  sendAt          DateTime
+  channel         ChannelType
+  contactListId   String
+  subject         String?
+  messageTemplate String
+  status          CampaignStatus    @default(PENDING)
+  createdAt       DateTime          @default(now())
+  contactList     ContactList       @relation(fields: [contactListId], references: [id])
+  sequence        CampaignSequence  @relation(fields: [sequenceId], references: [id])
+  deliveries      MessageDelivery[]
+}
+
+model MessageDelivery {
+  id              String         @id @default(uuid())
+  campaignStepId  String
+  leadSubmitId    String
+  status          DeliveryStatus @default(PENDING)
+  resendMessageId String?
+  openedAt        DateTime?
+  clickedAt       DateTime?
+  errorMessage    String?
+  createdAt       DateTime       @default(now())
+  campaignStep    CampaignStep   @relation(fields: [campaignStepId], references: [id])
+  leadSubmit      LeadSubmit     @relation(fields: [leadSubmitId], references: [id])
+}
+
+model MapCountry {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  states    MapState[]
+}
+
+model MapState {
+  id        String     @id @default(uuid())
+  name      String
+  acronym   String
+  countryId String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  cities    MapCity[]
+  country   MapCountry @relation(fields: [countryId], references: [id])
+
+  @@unique([acronym, countryId])
+}
+
+model MapCity {
+  id        String        @id @default(uuid())
+  name      String
+  stateId   String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  state     MapState      @relation(fields: [stateId], references: [id])
+  districts MapDistrict[]
+
+  @@unique([name, stateId])
+}
+
+model MapDistrict {
+  id        String   @id @default(uuid())
+  name      String
+  cityId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  city      MapCity  @relation(fields: [cityId], references: [id])
+
+  @@unique([name, cityId])
+}
+
+model UserLog {
+  id         String   @id @default(uuid())
+  action     String
+  resource   String
+  resourceId String
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+model EcommerceCategory {
+  id               String              @id @default(uuid())
+  name             String
+  slug             String
+  parentId         String?
+  enterpriseId     String
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  deletedAt        DateTime?
+  enterprise       Enterprise          @relation(fields: [enterpriseId], references: [id])
+  parent           EcommerceCategory?  @relation("EcommerceCategoryParent", fields: [parentId], references: [id])
+  children         EcommerceCategory[] @relation("EcommerceCategoryParent")
+  EcommerceProduct EcommerceProduct[]
+
+  @@unique([slug, enterpriseId], name: "slug_enterpriseId")
+}
+
+model EcommerceProduct {
+  id                    String                  @id @default(uuid())
+  name                  String
+  slug                  String
+  description           String?
+  price                 Decimal?
+  sku                   String?
+  enabled               Boolean                 @default(true)
+  visible               Boolean                 @default(true)
+  enterpriseId          String
+  categoryId            String?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  deletedAt             DateTime?
+  ecommerceCategory     EcommerceCategory?      @relation(fields: [categoryId], references: [id])
+  enterprise            Enterprise              @relation(fields: [enterpriseId], references: [id])
+  EcommerceProductImage EcommerceProductImage[]
+  ProductToAttribute    ProductToAttribute[]
+
+  @@unique([slug, enterpriseId], name: "slug_enterpriseId")
+}
+
+model EcommerceProductImage {
+  id        String           @id @default(uuid())
+  url       String
+  altText   String?
+  order     Int              @default(0)
+  productId String
+  product   EcommerceProduct @relation(fields: [productId], references: [id])
+}
+
+model ProductAttribute {
+  id                   String                 @id @default(uuid())
+  slug                 String                 @unique
+  type                 AttributeType
+  deletedAt            DateTime?
+  AttributeTranslation AttributeTranslation[]
+  values               AttributeValue[]
+  products             ProductToAttribute[]
+}
+
+model AttributeTranslation {
+  id          String           @id @default(uuid())
+  attributeId String
+  locale      LocaleList
+  name        String
+  attribute   ProductAttribute @relation(fields: [attributeId], references: [id])
+
+  @@unique([attributeId, locale])
+}
+
+model AttributeValue {
+  id                     String                      @id @default(uuid())
+  attributeId            String
+  deletedAt              DateTime?
+  attribute              ProductAttribute            @relation(fields: [attributeId], references: [id])
+  translations           AttributeValueTranslation[]
+  SelectedAttributeValue SelectedAttributeValue[]
+}
+
+model AttributeValueTranslation {
+  id               String         @id @default(uuid())
+  attributeValueId String
+  locale           LocaleList
+  label            String
+  value            String
+  attributeValue   AttributeValue @relation(fields: [attributeValueId], references: [id])
+
+  @@unique([attributeValueId, locale])
+}
+
+model ProductToAttribute {
+  id             String                   @id @default(uuid())
+  productId      String
+  attributeId    String
+  attribute      ProductAttribute         @relation(fields: [attributeId], references: [id])
+  product        EcommerceProduct         @relation(fields: [productId], references: [id])
+  selectedValues SelectedAttributeValue[]
+
+  @@unique([productId, attributeId])
+}
+
+model SelectedAttributeValue {
+  id              String             @id @default(uuid())
+  productToAttrId String
+  valueId         String
+  order           Int?
+  image           String?
+  extraCost       Decimal?
+  stock           Int?
+  productToAttr   ProductToAttribute @relation(fields: [productToAttrId], references: [id])
+  value           AttributeValue     @relation(fields: [valueId], references: [id])
+
+  @@unique([productToAttrId, valueId])
+}
+
+model EcommerceLocation {
+  id                 String                        @id @default(uuid())
+  name               String
+  code               String?
+  path               String?
+  type               LocationType
+  parentId           String?
+  latitude           Float?
+  longitude          Float?
+  parent             EcommerceLocation?            @relation("LocationParent", fields: [parentId], references: [id])
+  children           EcommerceLocation[]           @relation("LocationParent")
+  EnterpriseLocation EnterpriseEcommerceLocation[]
+}
+
+model EnterpriseEcommerceLocation {
+  id           String            @id @default(uuid())
+  enterpriseId String
+  locationId   String
+  enterprise   Enterprise        @relation(fields: [enterpriseId], references: [id])
+  location     EcommerceLocation @relation(fields: [locationId], references: [id])
+}
+
+enum EnterpriseType {
+  MASTER
+  STANDARD
+}
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum ChannelType {
+  EMAIL
+  WHATSAPP
+}
+
+enum CampaignStatus {
+  PENDING
+  SENDING
+  SENT
+  ERROR
+}
+
+enum DeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  OPENED
+  CLICKED
+}
+
+enum AttributeType {
+  TEXT
+  NUMBER
+  BOOLEAN
+  DATE
+  URL
+  IMAGE
+  RICH_TEXT
+}
+
+enum LocaleList {
+  ptBR @map("pt-BR")
+  enUS @map("en-US")
+}
+
+enum LocationType {
+  COUNTRY
+  STATE
+  CITY
+  DISTRICT
+}
+
+enum LeadActivityType {
+  COMMENT
+  CALL
+  MEETING
+  TASK
+  NOTE
+}
+
+enum ContractStatus {
+  ACTIVE        // contrato ativo, tudo liberado
+  SUSPENDED     // suspensão temporária
+  CANCELED      // cancelado definitivamente
+  PENDING       // aguardando início ou aprovação
+}
+
+enum FinancialStatus {
+  OK            // financeiro em dia
+  LATE          // inadimplente
+  RENEGOTIATED  // renegociado
+  BLOCKED       // bloqueado (ex: após X dias de inadimplência)
+}
+
+enum ContractType {
+  NEW
+  RENEWAL
+}
+
+enum ServiceStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum BillingCycle {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+  ONE_TIME
+}
+
+enum MeetingType {
+  ONLINE
+  PRESENTIAL
+  HYBRID
+}
+
+enum MeetingParticipantRole {
+  HOST
+  CO_HOST
+  PRESENTER
+  PARTICIPANT
+  OBSERVER
+}
+
+enum TaxonomyType {
+  category
+  tag
+  collection
+}
